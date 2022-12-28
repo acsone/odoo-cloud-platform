@@ -134,11 +134,12 @@ class IrAttachment(models.Model):
     def _store_file_write(self, key, bin_data):
         if self._storage() == 's3':
             bucket = self._get_s3_bucket()
-            obj = bucket.Object(key=key)
+            path = "%s/%s" % (key[:2], key)
+            obj = bucket.Object(key=path)
             file = io.BytesIO()
             file.write(bin_data)
             file.seek(0)
-            filename = 's3://%s/%s' % (bucket.name, key)
+            filename = 's3://%s/%s' % (bucket.name, path)
             try:
                 obj.upload_fileobj(file)
             except ClientError as error:
