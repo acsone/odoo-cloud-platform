@@ -140,26 +140,34 @@ class IrAttachment(models.Model):
     def _store_file_write(self, key, bin_data):
         location = self.env.context.get('storage_location') or self._storage()
         if location == 's3':
-            bucket = self._get_s3_bucket()
-            obj = bucket.Object(key=key)
-            with io.BytesIO() as file:
-                file.write(bin_data)
-                file.seek(0)
-                filename = 's3://%s/%s' % (bucket.name, key)
-                try:
-                    obj.upload_fileobj(file)
-                except ClientError as error:
-                    # log verbose error from s3, return short message for user
-                    _logger.exception(
-                        'Error during storage of the file %s' % filename
-                    )
-                    raise exceptions.UserError(
-                        _('The file could not be stored: %s') % str(error)
-                    )
+            filename= self.write_to_s3(key,bin_data)
         else:
             _super = super()
             filename = _super._store_file_write(key, bin_data)
+        return filename        
+
+    def write_to_s3(self,key,bin_data,extra_args=None):
+        
+        bucket = self._get_s3_bucket()
+        obj = bucket.Object(key=key)
+        with io.BytesIO() as file:
+            file.write(bin_data)
+            file.seek(0)
+            filename = 's3://%s/%s' % (bucket.name, key)
+            try:
+                obj.upload_fileobj(file,ExtraArgs=extra_args)
+            except ClientError as error:
+                # log verbose error from s3, return short message for user
+                _logger.exception(
+                    'Error during storage of the file %s' % filename
+                )
+                raise exceptions.UserError(
+                    _('The file could not be stored: %s') % str(error)
+                )
+        
         return filename
+    
+
 
     @api.model
     def _store_file_delete(self, fname):
