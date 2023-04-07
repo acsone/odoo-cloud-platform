@@ -55,7 +55,9 @@ class IrAttachment(models.Model):
             _logger.warning(msg)
         return is_disabled
 
-    def _register_hook(self):
+    def _disabled_register_hook(self):
+        # disable the register hook to avoid the migration of attachments on
+        # each module update
         super()._register_hook()
         location = self.env.context.get("storage_location") or self._storage()
         # ignore if we are not using an object storage
