@@ -49,12 +49,14 @@ class IrAttachment(models.Model):
 
         """
         connect_str = os.environ.get("AZURE_STORAGE_CONNECTION_STRING")
+        connect_url = os.environ.get("AZURE_STORAGE_URL")
         account_name = os.environ.get("AZURE_STORAGE_ACCOUNT_NAME")
         account_url = os.environ.get("AZURE_STORAGE_ACCOUNT_URL")
         account_key = os.environ.get("AZURE_STORAGE_ACCOUNT_KEY")
         account_use_aad = os.environ.get("AZURE_STORAGE_USE_AAD")
         if not (
             connect_str
+            or connect_url
             or (account_name and account_url and account_key)
             or account_use_aad
         ):
@@ -62,6 +64,8 @@ class IrAttachment(models.Model):
                 "If you want to read from the Azure container, you must provide the "
                 "following environment variables:\n"
                 "* AZURE_STORAGE_CONNECTION_STRING\n"
+                "or\n"
+                "* AZURE_STORAGE_URL\n"
                 "or\n"
                 "* AZURE_STORAGE_ACCOUNT_NAME\n"
                 "* AZURE_STORAGE_ACCOUNT_URL\n"
@@ -87,6 +91,18 @@ class IrAttachment(models.Model):
                     "connection string."
                 )
                 raise exceptions.UserError(str(error)) from None
+        elif connect_url:
+            try:
+                blob_service_client = BlobServiceClient.from_blob_url(
+                    connect_url
+                )
+            except HttpResponseError as error:
+                _logger.exception(
+                    "Error during the connection to Azure container using the "
+                    "SAS URL."
+                )
+                raise exceptions.UserError(str(error)) from None
+
         else:
             try:
                 sas_token = generate_account_sas(
